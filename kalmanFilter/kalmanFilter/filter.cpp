@@ -9,6 +9,9 @@
 
 //sensor functions which are used but not written yet
 double getGyroZ() {};
+double getGyroX() {};
+double getGyroY() {};
+double getEncoder() {};
 double getAccX() {};
 double getAccY() {};
 void setDelay(int time) {};
@@ -185,6 +188,7 @@ void routeEstimator()
 	double** u = allocateMatrix(1, 1, u);
 	double** y = allocateMatrix(1, 1, y);
 	double accX, accY;
+	double gyrX, gyrY;
 
 	//variables storing results of aritmetical operations on matrixes
 	//Ax, Bu, PCT, Keps, KS, 2x1, AP, AT, APAT 2x2, CP 1x2
@@ -205,10 +209,11 @@ void routeEstimator()
 	//initialisation
 	dt = 0.1;
 
+	//s(k) = s(k-1) + v(k-1) * dt + 0.5*u(k-1)*t^2 + sNoise; v(k) = v(k-1) + t*u(k-1) + vNoise:
 	A[0][0] = 1;
-	A[0][1] = -dt;
+	A[0][1] = dt;
 	A[1][0] = 0;
-	A[1][1] = 1;
+	A[1][1] = 0.5;
 
 	B[0][0] = 0.5*pow(dt,2);
 	B[1][0] = dt;
@@ -236,22 +241,23 @@ void routeEstimator()
 	//initial delay of the filter (the same as the microcontroler) here
 	setDelay(INITIAL_DELAY);
 
-	//accX accY <- get current acceleration here
-	accX = getAccX() * 4 / 65535;
-	accY = getAccY() * 4 / 65535;
+	//gyroX gyroY <- get current velocity here
+	gyroX = getGyroX() * 250 / 32768; //rescale data
+	gyroY = getGyroY() * 250 / 32768;
 	
-	if(accY != 0)
-		xNext[0][0] = atan(accX / accY) * 180 / M_PI;
-	else if(accX == 0) xNext[0][0] = 0;
-		else if(accX > 0) xNext[0][0] = 90;
-			else if(accX < 0) xNext[0][0] = -90;
-	xNext[1][0] = 0;
+	//initial route is zero
+	xNext[0][0] = 0;
+	//velocity abs value
+	xNext[1][0] = sqrt(pow(gyrX,2)+pow(gyrY,2));
 
 	//Calculations made every 100ms
 	while (1)
 	{		
 		// x(t+1|t) = Ax(t|t) + Bu(t) 
-		u[0][0] = getGyroZ() * 250 / 32768; //rescale data
+		accX = getAccX() * 4 / 65535; //rescale data
+		accY = getAccY() * 4 / 65535; 
+		
+		u[0][0] = angle * sqrt(pow(accX,2)+pow(accY,2)); 
 		matrix2x2Mult2x1(A, xNext, Ax);
 		matrix2x1Mult1x1(B, u, Bu);
 		matrixAdd2x1(Ax, Bu, xPrev);
@@ -263,14 +269,7 @@ void routeEstimator()
 		matrixAdd2x2(APAT, V, pPrev);
 
 		// eps(t) = y(t) - Cx(t|t-1)
-		accX = getAccX(); //current acceleration
-		accY = getAccY();
-		y[0][0] = atan(accX / accY) * 180 / M_PI; //meassured angle of movement
-		if(accY != 0)
-		y[0][0] = atan(accX / accY) * 180 / M_PI;
-			else if(accX == 0) y[0][0] = 0;
-				else if(accX > 0) y[0][0] = 90;
-					else if(accX < 0) y[0][0] = -90;
+		y[0][0] = getEncoder(); //meassured number of encoder ticks (RESCALE IT!)
 		matrix1x2Mult2x1(C, xPrev, Cx);
 		eps[0][0] = y[0][0] - Cx[0][0];
 
