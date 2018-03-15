@@ -20,6 +20,8 @@ double** allocateMatrix(int rows, int cols, double** matrix)
 	for (int i = 0; i < rows; i++)
 	{
 		matrix[i] = (double*)malloc(sizeof(*matrix) *cols);
+		for(int j = 0; j < cols; j++)
+			matrix[i][j] = 0;
 	}
 	return matrix;
 }
@@ -127,7 +129,7 @@ void measurementsFilter(void * params)
 		// eps(t) = y(t) - Cx(t|t-1)
 		accX = 0;//accX <- get current acceleration here
 		accY = 0;//accY <- get current acceleration here
-		y[0][0] = atan(accX / accY) * 180 / M_PI;
+		y[0][0] = atan(accX / accY) * 180 / M_PI; //meassured angle
 		matrix1x2Mult2x1(C, xPrev, Cx);
 		eps[0][0] = y[0][0] - Cx[0][0];
 
