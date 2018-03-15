@@ -103,8 +103,8 @@ void measurementsFilter(void * params)
 	setDelay(INITIAL_DELAY);
 
 	//accX accY <- get current acceleration here
-	accX = getAccX();
-	accY = getAccY();
+	accX = getAccX() * 4 / 65535;
+	accY = getAccY() * 4 / 65535;
 	
 	xNext[0][0] = atan(accX / accY) * 180 / M_PI;
 	xNext[1][0] = 0;
